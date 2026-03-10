@@ -1,0 +1,127 @@
+﻿---
+name: paper-polishing-chinese
+description: >
+  中文学术论文语言润色技能，专为经济学等社会科学领域的中文学位论文和期刊投稿设计。
+  Use this skill when the user needs:
+  (1) 中文学术论文的语言润色（去口语化、用词精准、句式优化）,
+  (2) 中文学术论文的逻辑衔接与段落重组,
+  (3) 中文标点符号规范化（依据 GB/T 15834-2011）,
+  (4) 学术表达习惯修正（"本文"用法、被动/主动语态、人称规范）,
+  (5) 英译中学术文本的中文母语化润色。
+  Trigger phrases: "润色中文论文", "中文润色", "帮我改论文", "论文语言修改",
+  "中文学术写作", "去口语化", "修改中文表达", "论文表达优化", "中文论文polish",
+  "检查中文表达", "论文语言规范", "academic Chinese polishing".
+  This skill generates BOTH a track-changes .docx AND a Markdown polishing report
+  for every polishing task. This skill is for Chinese academic writing only;
+  for English polishing, use the paper-proofreading-english skill instead.
+---
+
+# 中文学术论文语言润色
+
+对中文学术论文进行语言层面的系统润色，输出带修订标记的 .docx 文件和 Markdown 润色报告。
+
+## 核心原则
+
+1. **准确第一。** 每一处修改都必须保持原意不变。术语不确定时，立即向用户确认。
+2. **规范为本。** 遵循 GB/T 15834-2011（标点符号用法）、GB/T 15835-2011（数字用法）和教育部《学位论文编写规则》。
+3. **双重输出。** 每次润色任务都生成：(a) 带修订标记的 .docx 文件，(b) Markdown 润色报告。
+4. **逐段处理。** 全文润色时，逐段处理，确保每段修改可追溯。
+5. **问而不猜。** 遇到歧义表达或不确定的专业术语时，停下来向用户确认。
+
+## 润色优先级
+
+按以下优先级依次修正：
+
+1. **去口语化** — 消除口语词汇与表达（参见 `references/colloquial-to-formal.md`）
+2. **用词精准** — 替换模糊词为精确学术用语（参见 `references/word-precision.md`）
+3. **句式优化** — 长句拆分、短句合并、调整语序
+4. **逻辑衔接** — 添加/修正关联词与过渡语
+5. **学术表达习惯** — 人称规范、"本文"用法、被动/主动语态
+6. **标点符号** — 依据 GB/T 15834-2011 纠正标点
+7. **冗余削减** — 删除重复表述、空洞套话
+
+## 工作流程
+
+### 步骤 1：识别任务类型
+
+判断用户需要的润色类型：
+
+- **全文润色**：对完整论文或大段落进行系统润色
+- **局部润色**：对特定段落或句子进行精修
+- **英译中润色**：将从英文翻译过来的中文文本进行母语化润色
+- **格式规范化**：重点修正标点、数字、引用格式等
+
+### 步骤 2：读取参考文件
+
+润色前，根据需要查阅参考文件：
+
+- 去口语化查询：读取 `references/colloquial-to-formal.md`
+- 用词精准查询：读取 `references/word-precision.md`
+- 句式与衔接规则：读取 `references/sentence-structure.md`
+- 学术表达规范：读取 `references/academic-conventions.md`
+- 标点符号规范：读取 `references/punctuation-rules.md`
+
+### 步骤 3：执行润色
+
+按优先级层层修改。对于每处修改：
+- 记录原文、修改后文本
+- 标注修改类别
+- 注明修改理由
+
+### 步骤 4：生成双重输出
+
+先生成 Markdown 润色报告，再按 docx 技能的原生 Word 修订流程生成带修订标记的 .docx。
+
+`ash
+# 生成 Markdown 润色报告
+python3 SKILL_DIR/scripts/generate_polishing_report_zh.py \
+  --input-json /tmp/polishing_data_zh.json \
+  --output /mnt/user-data/outputs/润色报告.md
+`
+
+.docx 修订稿必须使用 docx 技能原生流程（禁止视觉模拟修订脚本）：
+
+`ash
+# 1) 解包原始文档
+python scripts/office/unpack.py /path/to/input.docx unpacked/
+
+# 2) 在 unpacked/word/document.xml 中按修订清单写入原生修订标签
+#    使用 <w:del>/<w:ins>；默认作者为 Claude；仅标注最小必要改动
+
+# 3) 回包生成修订稿
+python scripts/office/pack.py unpacked/ /mnt/user-data/outputs/润色修订稿.docx --original /path/to/input.docx
+`
+
+实施规范：
+- 不得调用 scripts/generate_track_changes_zh.py 或任何视觉模拟修订脚本。
+- 修订标签结构、作者规则与常见坑，参照 docx 技能 SKILL.md 中的 Editing Existing Documents 与 XML Reference -> Tracked Changes。
+
+其中 SKILL_DIR 为本技能目录路径。--input-json 文件格式如下：
+
+## 修改类别说明
+
+| 类别 | 说明 | 示例 |
+|------|------|------|
+| 去口语化 | 消除口语化、网络化词汇 | "其实"→"实际上"；"搞清楚"→"明确" |
+| 用词精准 | 模糊词替换为精确学术用语 | "很多"→"大量"/"众多"；"东西"→"要素"/"因素" |
+| 句式优化 | 长句拆分、语序调整、主谓匹配 | 将80字以上长句拆为2-3个短句 |
+| 逻辑衔接 | 添加/修正关联词、过渡句 | 增加"因此""然而""具体而言"等 |
+| 学术规范 | 人称、语态、"本文"用法修正 | "我们发现"→"研究发现"；"我觉得"→"本文认为" |
+| 标点符号 | 按 GB/T 15834-2011 修正 | 英文逗号→中文逗号；省略号"..."→"……" |
+| 冗余削减 | 删除重复、套话、空洞表述 | 删除"众所周知""不言而喻"等 |
+
+## 经济学论文特殊规范
+
+- **变量名称**：正文中首次出现的变量须给出中英文对照，如"全要素生产率（TFP）"
+- **计量术语**：使用规范译名，如"工具变量"（非"工具性变量"）、"双重差分"（非"倍差法"）
+- **数字表达**：依据 GB/T 15835-2011，统计数据用阿拉伯数字，概数用汉字
+- **引用格式**：正文引用"张三（2020）"或"（张三，2020）"，保持全文一致
+
+## 关键提醒
+
+- **绝不篡改学术观点。** 润色只改语言，不改思想。
+- **保持作者风格。** 在规范前提下，尽量保留作者原有的表达特点。
+- **尊重学科惯例。** 经济学、金融学等学科有特定的术语和表达习惯。
+- **中英文混排规范。** 中英文之间加空格，英文术语首字母大写规则须统一。
+- **目标期刊**：《经济研究》《管理世界》《中国工业经济》《经济学（季刊）》等。
+
